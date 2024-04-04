@@ -1,6 +1,6 @@
 use halo2_base::QuantumCell::{Constant, Existing, Witness};
 use halo2_base::{
-    gates::{range::RangeStrategy, GateChip, GateInstructions, RangeChip, RangeInstructions},
+    gates::{GateChip, GateInstructions, RangeChip, RangeInstructions},
     utils::{biguint_to_fe, fe_to_biguint, BigPrimeField, ScalarField},
     AssignedValue, Context, QuantumCell,
 };
@@ -8,18 +8,19 @@ use num_bigint::BigUint;
 use num_integer::Integer;
 use std::ops::Mul;
 use std::{fmt::Debug, ops::Sub};
+use halo2_base::gates::circuit::builder::BaseCircuitBuilder;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum FixedPointStrategy {
-    Vertical, // vanilla implementation with vertical basic gate(s)
-}
+// #[derive(Clone, Copy, Debug, PartialEq)]
+// pub enum FixedPointStrategy {
+//     Vertical, // vanilla implementation with vertical basic gate(s)
+// }
 
 /// `PRECISION_BITS` indicates the precision of integer and fractional parts.
 /// For example, `PRECISION_BITS = 32` indicates this chip implements 32.32 fixed point decimal arithmetics.
 /// The valid range of the fixed point decimal is -max_value < x < max_value.
 #[derive(Clone, Debug)]
 pub struct FixedPointChip<F: BigPrimeField, const PRECISION_BITS: u32> {
-    strategy: FixedPointStrategy,
+    //strategy: FixedPointStrategy,
     pub gate: RangeChip<F>,
     pub quantization_scale: F,
     pub max_value: BigUint,
@@ -30,16 +31,19 @@ pub struct FixedPointChip<F: BigPrimeField, const PRECISION_BITS: u32> {
 }
 
 impl<F: BigPrimeField, const PRECISION_BITS: u32> FixedPointChip<F, PRECISION_BITS> {
-    pub fn new(strategy: FixedPointStrategy, lookup_bits: usize) -> Self {
+    pub fn new(lookup_bits: usize) -> Self {
         // Note 254/4 = 63.5
         assert!(PRECISION_BITS <= 63, "support only precision bits <= 63");
         assert!(PRECISION_BITS >= 32, "support only precision bits >= 32");
-        let gate = RangeChip::new(
-            match strategy {
-                FixedPointStrategy::Vertical => RangeStrategy::Vertical,
-            },
+
+        let bsb = BaseCircuitBuilder::new(false);
+
+        let gate = bsb.range_chip();
+
+        /* FIXME: neil remvoed this to compile...
+            let gate = RangeChip::new(
             lookup_bits,
-        );
+        ); */
         // Simple uniform symmetric quantization scheme which enforces zero point to be exactly 0
         // to reduce lots of computations.
         // Quantization: x_q = xS where S is `quantization_scale`
@@ -68,7 +72,6 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> FixedPointChip<F, PRECISION_BI
         }
 
         Self {
-            strategy,
             gate,
             quantization_scale,
             max_value,
@@ -80,7 +83,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> FixedPointChip<F, PRECISION_BI
     }
 
     pub fn default(lookup_bits: usize) -> Self {
-        Self::new(FixedPointStrategy::Vertical, lookup_bits)
+        Self::new(lookup_bits)
     }
 
     pub fn quantization(&self, x: f64) -> F {
@@ -208,7 +211,6 @@ pub trait FixedPointInstructions<F: ScalarField, const PRECISION_BITS: u32> {
     fn gate(&self) -> &Self::Gate;
     /// returns the RangeGateChip associated with the FixedPointChip
     fn range_gate(&self) -> &Self::RangeGate;
-    fn strategy(&self) -> FixedPointStrategy;
 
     fn qabs(&self, ctx: &mut Context<F>, a: impl Into<QuantumCell<F>>) -> AssignedValue<F>
     where
@@ -473,9 +475,6 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> FixedPointInstructions<F, PREC
         &self.gate.gate()
     }
 
-    fn strategy(&self) -> FixedPointStrategy {
-        self.strategy
-    }
 
     /// Adds the given numbers and returns their sum
     /// Simply uses the GateChip fn add
@@ -830,12 +829,12 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> FixedPointInstructions<F, PREC
     where
         F: BigPrimeField,
     {
-        let a = self.gate().add(ctx, Constant(<F>::zero()), a.into());
-        let b = self.gate().add(ctx, Constant(<F>::zero()), b.into());
+        let a = self.gate().add(ctx, Constant(F::zero()), a.into());
+        let b = self.gate().add(ctx, Constant(F::zero()), b.into());
         self.gate().assert_bit(ctx, a);
         self.gate().assert_bit(ctx, b);
         let ab = self.gate().add(ctx, a, b);
-        let one = self.gate().add(ctx, Constant(<F>::one()), Constant(<F>::zero()));
+        let one = self.gate().add(ctx, Constant(F::one()), Constant(F::zero()));
         let xor = self.gate().is_equal(ctx, ab, one);
 
         xor

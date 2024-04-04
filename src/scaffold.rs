@@ -4,7 +4,7 @@
 use ark_std::{end_timer, start_timer};
 use halo2_base::{
     gates::{
-        builder::{GateCircuitBuilder, GateThreadBuilder, RangeCircuitBuilder},
+        circuit::builder::{GateCircuitBuilder, GateThreadBuilder, RangeCircuitBuilder},
         flex_gate::FlexGateConfig,
         range::RangeConfig,
     },
