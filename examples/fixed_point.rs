@@ -101,8 +101,5 @@ fn main() {
     // mock(some_algorithm_in_zk, 2.0);
     // mock(some_algorithm_in_zk, 4.0);
     run(some_algorithm_in_zk, args);
-
-    // uncomment below to run actual prover:
-    // the 3rd parameter is a dummy input to provide for the proving key generation
-    //run( some_algorithm_in_zk, args);
+    
 }
