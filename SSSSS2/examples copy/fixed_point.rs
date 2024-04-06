@@ -9,7 +9,6 @@ use zk_fixed_point_chip::scaffold::run;
 use std::env::{var, set_var};
 use clap::Parser;
 use halo2_base::gates::circuit::builder::BaseCircuitBuilder;
-use linfa_linear::LinearRegression;
 use serde::{Deserialize, Serialize};
 
 
@@ -86,9 +85,6 @@ fn some_algorithm_in_zk<F: ScalarField>(
 }
 
 fn main() {
-
-    // let lin_reg = LinearRegression::new();
-
     env_logger::init();
     // genrally lookup_bits is degree - 1
     set_var("LOOKUP_BITS", 12.to_string());
@@ -106,4 +102,7 @@ fn main() {
     // mock(some_algorithm_in_zk, 4.0);
     run(some_algorithm_in_zk, args);
 
+    // uncomment below to run actual prover:
+    // the 3rd parameter is a dummy input to provide for the proving key generation
+    //run( some_algorithm_in_zk, args);
 }

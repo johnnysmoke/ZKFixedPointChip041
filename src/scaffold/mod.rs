@@ -81,8 +81,11 @@ pub fn run_on_inputs<T: DeserializeOwned>(
     println!("Universal trusted setup (unsafe!) available at: params/kzg_bn254_{k}.srs");
     match cli.command {
         SnarkCmd::Mock => {
-            let circuit = precircuit.create_circuit(CircuitBuilderStage::Mock, None, &params);
-            MockProver::run(k, &circuit, circuit.instances()).unwrap().assert_satisfied();
+            let circuit = precircuit.create_circuit(
+                CircuitBuilderStage::Mock,
+                None,
+                &params);
+            MockProver::run(k, &circuit, circuit.instances()).unwrap().assert_satisfied();                          /// MOCK
         }
         SnarkCmd::Keygen => {
             let pk_path = data_path.join(PathBuf::from(format!("{name}.pk")));
@@ -90,7 +93,7 @@ pub fn run_on_inputs<T: DeserializeOwned>(
                 fs::remove_file(&pk_path).unwrap();
             }
             let pinning_path = config_path.join(PathBuf::from(format!("{name}.json")));
-            let circuit = precircuit.create_circuit(CircuitBuilderStage::Keygen, None, &params);
+            let circuit = precircuit.create_circuit(CircuitBuilderStage::Keygen, None, &params);  /// KEYGEN
             let pk = gen_pk(&params, &circuit, None);
             let c_params = circuit.params();
             let break_points = circuit.break_points();
@@ -121,7 +124,7 @@ pub fn run_on_inputs<T: DeserializeOwned>(
             let pinning: (BaseCircuitParams, MultiPhaseThreadBreakPoints) =
                 serde_json::from_reader(&mut pinning_file).expect("Could not read pinning file");
             let circuit =
-                precircuit.create_circuit(CircuitBuilderStage::Prover, Some(pinning), &params);
+                precircuit.create_circuit(CircuitBuilderStage::Prover, Some(pinning), &params);                  /// PROVE
             let pk_path = data_path.join(PathBuf::from(format!("{name}.pk")));
             let pk = custom_read_pk(pk_path, &circuit);
             let snark_path = data_path.join(PathBuf::from(format!("{name}.snark")));
@@ -136,7 +139,7 @@ pub fn run_on_inputs<T: DeserializeOwned>(
         }
         SnarkCmd::Verify => {
             let vk_path = data_path.join(PathBuf::from(format!("{name}.vk")));
-            let mut circuit = precircuit.create_circuit(CircuitBuilderStage::Keygen, None, &params);
+            let mut circuit = precircuit.create_circuit(CircuitBuilderStage::Keygen, None, &params);     /// VERIFY
             let vk = custom_read_vk(vk_path, &circuit);
             let snark_path = data_path.join(PathBuf::from(format!("{name}.snark")));
             let snark = read_snark(&snark_path)
