@@ -2,7 +2,7 @@ use halo2_base::utils::{ScalarField, BigPrimeField};
 use halo2_base::AssignedValue;
 use halo2_base::Context;
 use zk_fixed_point_chip::gadget::fixed_point::{FixedPointChip, FixedPointInstructions};
-use zk_fixed_point_chip::scaffold::cmd::Cli;
+use zk_fixed_point_chip::scaffold::cmd::{Cli, SnarkCmd};
 #[allow(unused_imports)]
 
 use zk_fixed_point_chip::scaffold::run;
@@ -94,8 +94,28 @@ fn main() {
     set_var("LOOKUP_BITS", 12.to_string());
     set_var("DEGREE", 13.to_string());
 
-    let args = Cli::parse();
+    let mut args_mock = Cli::parse();
+    let mut args_keygen = Cli::parse();
+    let mut args_proove = Cli::parse();
+    let mut args_verify =  Cli::parse();
 
+    println!("invoking mock...");
+    args_mock.command = SnarkCmd::Mock;
+    run(some_algorithm_in_zk, args_mock);
+
+    println!("\ninvoking keygen...");
+    args_keygen.command = SnarkCmd::Keygen;
+    run(some_algorithm_in_zk, args_keygen);
+
+    println!("\ninvoking prove...");
+    args_proove.command = SnarkCmd::Prove;
+    run(some_algorithm_in_zk, args_proove);
+
+    println!("\ninvoking verify...");
+    args_verify.command = SnarkCmd::Verify;
+    run(some_algorithm_in_zk, args_verify);
+
+    println!("\nDone!");
     // run mock prover
     // mock(some_algorithm_in_zk, -12.0);
     // mock(some_algorithm_in_zk, -1.88724767676867);
@@ -104,6 +124,6 @@ fn main() {
     // mock(some_algorithm_in_zk, 1.128);
     // mock(some_algorithm_in_zk, 2.0);
     // mock(some_algorithm_in_zk, 4.0);
-    run(some_algorithm_in_zk, args);
+
 
 }

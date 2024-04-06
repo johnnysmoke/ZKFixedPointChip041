@@ -52,8 +52,8 @@ default = []
 
 # Dev / testing mode. We make opt-level = 3 to improve proving times (otherwise it is really slow)
 [profile.dev]
-opt-level = 3
-debug = 1 # change to 0 or 2 for more or less debug info
+opt-level = 0
+debug = 2 # change to 0 or 2 for more or less debug info
 overflow-checks = true # default
 incremental = true # default
 
