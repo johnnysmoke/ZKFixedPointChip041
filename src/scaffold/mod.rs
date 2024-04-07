@@ -63,7 +63,10 @@ pub fn run<T: DeserializeOwned>(
 }
 
 pub fn run_on_inputs<T: DeserializeOwned>(
-    f: impl FnOnce(&mut BaseCircuitBuilder<Fr>, T, &mut Vec<AssignedValue<Fr>>),
+    f: impl FnOnce(
+        &mut BaseCircuitBuilder<Fr>,
+        T,
+        &mut Vec<AssignedValue<Fr>>),
     cli: Cli,
     private_inputs: T,
 ) {
@@ -94,13 +97,19 @@ pub fn run_on_inputs<T: DeserializeOwned>(
             }
             let pinning_path = config_path.join(PathBuf::from(format!("{name}.json")));
             let circuit = precircuit.create_circuit(CircuitBuilderStage::Keygen, None, &params);  // KEYGEN
+
+            // generate Proving Key ==> circuit used, i.e. f invoked
             let pk = gen_pk(&params, &circuit, None);
             let c_params = circuit.params();
+
+            // breakpoints
             let break_points = circuit.break_points();
+
             let mut pinning_file = File::create(&pinning_path)
                 .unwrap_or_else(|_| panic!("Could not create file at {pinning_path:?}"));
             serde_json::to_writer(&mut pinning_file, &(c_params, break_points))
                 .expect("Could not write pinning file");
+
             let mut pk_file = BufWriter::new(
                 File::create(&pk_path)
                     .unwrap_or_else(|_| panic!("Could not create file at {pk_path:?}")),
@@ -132,6 +141,7 @@ pub fn run_on_inputs<T: DeserializeOwned>(
                 fs::remove_file(&snark_path).unwrap();
             }
             let start = Instant::now();
+            // GENERATE SNARK PROOF
             gen_snark_shplonk(&params, &pk, circuit, Some(&snark_path));
             let prover_time = start.elapsed();
             println!("Proving time: {:?}", prover_time);
