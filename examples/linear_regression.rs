@@ -3,7 +3,7 @@ use halo2_base::utils::{ScalarField, BigPrimeField};
 use halo2_base::AssignedValue;
 use halo2_base::Context;
 use zk_fixed_point_chip::gadget::linear_regression::LinearRegressionChip;
-use zk_fixed_point_chip::nh_scaf::{NHCircuitInput, run_nh};
+use zk_fixed_point_chip::nh_scaf::{NHCircuitInput, run_nh, nh_proove_verify};
 #[allow(unused_imports)]
 //use zk_fixed_point_chip::scaffold::{mock, prove};
 use log::warn;
@@ -17,6 +17,7 @@ use clap::Parser;
 use halo2_base::gates::circuit::builder::BaseCircuitBuilder;
 use halo2_base::gates::circuit::CircuitBuilderStage;
 use halo2_proofs::pasta::vesta::Base;
+use std::time::{Duration, Instant};
 
 pub fn train_native(
     train_x: Vec<Vec<f64>>, train_y: Vec<f64>, lr: f64, epoch: i32, batch_size: usize
@@ -97,12 +98,11 @@ fn main() {
 
     let mut args_mock = Cli::parse();
     let mut cli_keygen = Cli::parse();
-    let mut cli_proove = Cli::parse();
+
     let mut cli_verify =  Cli::parse();
 
     args_mock.command = SnarkCmd::Mock;
     cli_keygen.command = SnarkCmd::Keygen;
-    cli_proove.command = SnarkCmd::Prove;
     cli_verify.command = SnarkCmd::Verify;
 
     let dataset = linfa_datasets::diabetes();
@@ -110,6 +110,8 @@ fn main() {
     let model = lin_reg.fit(&dataset).unwrap();
     println!("intercept:  {}", model.intercept());
     println!("parameters: {}", model.params());
+
+    let start = Instant::now();
 
     let mut train_x: Vec<Vec<f64>> = vec![];
     let mut train_y: Vec<f64> = vec![];
@@ -126,36 +128,48 @@ fn main() {
 
     train_native(train_x.clone(), train_y.clone(), learning_rate, epoch, batch_size);
 
-    let mut builder: BaseCircuitBuilder<Fr> = BaseCircuitBuilder::from_stage(CircuitBuilderStage::Keygen);
+    // let mut builder: BaseCircuitBuilder<Fr> = BaseCircuitBuilder::from_stage(CircuitBuilderStage::Keygen);
 
     let n_batch = (train_x.len() as f64 / batch_size as f64).ceil() as i64;
-    let dummy_inputs = (w.clone(), b.clone(), vec![vec![0.; dim]; batch_size as usize], vec![0.; batch_size as usize], 0.01);
+    let dummy_inputs = (
+        w.clone(),
+        b.clone(),
+        vec![vec![0.; dim]; batch_size as usize],
+        vec![0.; batch_size as usize],
+        0.01);
 
     let dd = NHCircuitInput{ data : dummy_inputs };
-
     run_nh(train, dd, cli_keygen);
+    println!("KEY GEN DONE w: {:?}, b: {:?}", w, b);
 
     //let (pk, break_points) = gen_key(train, dummy_inputs);
     for idx_epoch in 0..epoch {
 
-        println!("  ==> would run epoch:{:?}", idx_epoch);
-
-        /*
+        println!("  ==> Will run epoch:{:?}", idx_epoch);
         warn!("Epoch {:?}", idx_epoch + 1);
+
         for idx_batch in 0..n_batch {
+            let mut cli_proove = Cli::parse();
+            cli_proove.command = SnarkCmd::Prove;
             if (idx_batch as usize + 1) * batch_size > train_x.len() {
                 continue;
             }
             let batch_x = (&train_x[idx_batch as usize * batch_size..(idx_batch as usize + 1) * batch_size]).to_vec();
             let batch_y = (&train_y[idx_batch as usize * batch_size..min(train_y.len(), (idx_batch as usize + 1) * batch_size)]).to_vec();
             let private_inputs: (Vec<Fr>, Fr, Vec<Vec<f64>>, Vec<f64>, f64) = (w, b, batch_x, batch_y, learning_rate);
-            let out = prove_private(&mut builder, train, private_inputs, &pk, break_points.clone());
-            // out = mock(train, private_inputs);
+
+            let data_batch = NHCircuitInput{ data : private_inputs };
+
+            let out = nh_proove_verify(train, cli_proove, data_batch);
+
             w = (&out[..dim]).iter().map(|wi| (*wi).clone()).collect();
             b = out[dim];
-        }*/
+        }
     }
     println!("w: {:?}, b: {:?}", w, b);
+
+    let duration = start.elapsed();
+    println!("Time elapsed in [041] linear_regression::main0() is: {:?}", duration);
 
     // mock(train, (w, b, train_x, train_y));
     // prove(train, x0.clone(), x1.clone());
