@@ -16,8 +16,8 @@ pub struct LinearRegressionChip<F: BigPrimeField> {
 impl<F: BigPrimeField> LinearRegressionChip<F> {
     pub fn new(lookup_bits: usize) -> Self {
 
-        let bsb = BaseCircuitBuilder::new(true);
-
+        let mut bsb = BaseCircuitBuilder::new(true);
+        bsb.set_lookup_bits(lookup_bits);
         let chip = FixedPointChip::<F, 32>::default(lookup_bits, &bsb);
 
         Self { chip, lookup_bits }

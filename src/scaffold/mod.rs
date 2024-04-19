@@ -3,14 +3,15 @@
 //! We recommend not reading this module on first (or second) pass.
 // use ark_std::{end_timer, start_timer};
 use halo2_base::{
+    AssignedValue,
     gates::{
-        circuit::{builder::BaseCircuitBuilder, BaseCircuitParams, CircuitBuilderStage},
+        circuit::{BaseCircuitParams, builder::BaseCircuitBuilder, CircuitBuilderStage},
         flex_gate::MultiPhaseThreadBreakPoints,
     },
     halo2_proofs::{
         dev::MockProver,
         halo2curves::bn256::{Bn256, Fr, G1Affine},
-        plonk::{verify_proof, Circuit, ProvingKey, VerifyingKey},
+        plonk::{Circuit, ProvingKey, verify_proof, VerifyingKey},
         poly::{
             commitment::{Params, ParamsProver},
             kzg::{
@@ -22,13 +23,12 @@ use halo2_base::{
         SerdeFormat,
     },
     utils::fs::gen_srs,
-    AssignedValue,
 };
 use serde::de::DeserializeOwned;
 use snark_verifier_sdk::{
+    CircuitExt,
     gen_pk,
-    halo2::{gen_snark_shplonk, read_snark, PoseidonTranscript},
-    read_pk, CircuitExt, NativeLoader,
+    halo2::{gen_snark_shplonk, PoseidonTranscript, read_snark}, NativeLoader, read_pk,
 };
 use std::{
     env::var,
@@ -46,6 +46,7 @@ pub struct CircuitScaffold<T, Fn> {
     f: Fn,
     private_inputs: T,
 }
+
 
 pub fn run<T: DeserializeOwned>(
     f: impl FnOnce(&mut BaseCircuitBuilder<Fr>, T, &mut Vec<AssignedValue<Fr>>),
@@ -235,7 +236,10 @@ where
         // we need a 64-bit number as input in this case
         // while `some_algorithm_in_zk` was written generically for any field `F`, in practice we use the scalar field of the BN254 curve because that's what the proving system backend uses
         let mut assigned_instances = vec![];
+
+        // this is where function is invoked
         (self.f)(&mut builder, self.private_inputs, &mut assigned_instances);
+
         if !assigned_instances.is_empty() {
             assert_eq!(builder.assigned_instances.len(), 1, "num_instance_columns != 1");
             builder.assigned_instances[0] = assigned_instances;
@@ -252,3 +256,5 @@ where
         builder
     }
 }
+
+
